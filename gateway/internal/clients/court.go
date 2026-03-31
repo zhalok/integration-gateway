@@ -7,13 +7,19 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	"golang.org/x/time/rate"
 )
 
-const courtBaseURL = "http://localhost:9002"
+func courtBaseURL() string {
+	if u := os.Getenv("COURT_RECORDS_URL"); u != "" {
+		return u
+	}
+	return "http://localhost:9002"
+}
 
 type CourtClient struct {
 	http    *http.Client
@@ -70,7 +76,7 @@ func (c *CourtClient) Fetch(caseNumber string) CourtResult {
 	}
 
 	body, _ := json.Marshal(map[string]string{"caseNumber": caseNumber})
-	resp, err := c.http.Post(courtBaseURL+"/api/court-records/search", "application/json", bytes.NewReader(body))
+	resp, err := c.http.Post(courtBaseURL()+"/api/court-records/search", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return CourtResult{Err: fmt.Errorf("court request: %w", err)}
 	}

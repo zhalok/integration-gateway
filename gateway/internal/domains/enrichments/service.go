@@ -11,6 +11,22 @@ import (
 	"github.com/zhalok/integration-gateway/internal/worker"
 )
 
+// propertyFetcher is the subset of clients.PropertyClient used by the service.
+type propertyFetcher interface {
+	Fetch(state, county, parcelID string) clients.PropertyResult
+}
+
+// courtFetcher is the subset of clients.CourtClient used by the service.
+type courtFetcher interface {
+	Fetch(caseNumber string) clients.CourtResult
+}
+
+// scraFetcher is the subset of clients.SCRAClient used by the service.
+type scraFetcher interface {
+	Submit(lastName, firstName, ssnLast4, dob string) clients.SCRAResult
+	Poll(searchID string) clients.SCRAResult
+}
+
 // Service owns the enrichment lifecycle:
 // creating enrichments, resetting failed sources, computing overall status,
 // and processing enrichment by calling the external clients.
@@ -26,9 +42,9 @@ type Service interface {
 type service struct {
 	repo           Repository
 	caseRepo       cases.Repository
-	propertyClient *clients.PropertyClient
-	courtClient    *clients.CourtClient
-	scraClient     *clients.SCRAClient
+	propertyClient propertyFetcher
+	courtClient    courtFetcher
+	scraClient     scraFetcher
 	cbs            *circuitbreaker.Set
 	jobs           chan<- worker.Job
 }
@@ -73,12 +89,15 @@ func (s *service) Create(caseID string, courtCaseNumber *string) (*Enrichment, e
 func (s *service) ResetFailedSources(e *Enrichment) error {
 	if e.PRStatus == SourceFailed {
 		e.PRStatus = SourcePending
+		e.PRAttempts = 0
 	}
 	if e.CRStatus == SourceFailed {
 		e.CRStatus = SourcePending
+		e.CRAttempts = 0
 	}
 	if e.SCRAStatus == SourceFailed {
 		e.SCRAStatus = SourcePending
+		e.SCRAAttempts = 0
 	}
 	e.Status = StatusPending
 
@@ -99,12 +118,12 @@ func (s *service) ComputeAndUpdateStatus(enrichmentID int64) error {
 // It loads both the enrichment and its case, attempts each pending source,
 // updates the DB, and re-queues if any source is still pending.
 func (s *service) ProcessEnrichment(enrichmentID int64, caseID string) error {
-	e, err := s.repo.GetByCaseID(caseID)
+	e, err := s.repo.GetByID(enrichmentID)
 	if err != nil {
 		return fmt.Errorf("load enrichment: %w", err)
 	}
 	if e == nil {
-		return fmt.Errorf("enrichment not found for case %s", caseID)
+		return fmt.Errorf("enrichment not found: %d", enrichmentID)
 	}
 
 	c, err := s.caseRepo.GetByID(caseID)

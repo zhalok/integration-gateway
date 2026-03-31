@@ -4,10 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
-const propertyBaseURL = "http://localhost:9001"
+func propertyBaseURL() string {
+	if u := os.Getenv("PROPERTY_RECORDS_URL"); u != "" {
+		return u
+	}
+	return "http://localhost:9001"
+}
 
 type PropertyClient struct {
 	http *http.Client
@@ -29,7 +35,7 @@ type PropertyResult struct {
 // Fetch calls GET /api/properties/{state}/{county}/{parcelId}.
 // Returns a PropertyResult indicating success, transient failure, or permanent failure.
 func (c *PropertyClient) Fetch(state, county, parcelID string) PropertyResult {
-	url := fmt.Sprintf("%s/api/properties/%s/%s/%s", propertyBaseURL, state, county, parcelID)
+	url := fmt.Sprintf("%s/api/properties/%s/%s/%s", propertyBaseURL(), state, county, parcelID)
 
 	resp, err := c.http.Get(url)
 	if err != nil {
