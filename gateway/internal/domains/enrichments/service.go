@@ -177,7 +177,7 @@ func (s *service) attemptPropertyRecords(e *Enrichment, c *cases.Case) {
 	result := s.propertyClient.Fetch(c.PropertyState, c.PropertyCounty, c.PropertyParcelID)
 	if result.Err == nil {
 		e.PRStatus = SourceSuccess
-		e.PRData = result.Data
+		e.PRData = &result.Data
 		s.cbs.PropertyRecords.Success()
 		log.Printf("service: property records success enrichmentID=%d", e.ID)
 	} else if result.Permanent {
@@ -215,7 +215,7 @@ func (s *service) attemptCourtRecords(e *Enrichment, c *cases.Case) {
 	result := s.courtClient.Fetch(*c.CourtCaseNumber)
 	if result.Err == nil {
 		e.CRStatus = SourceSuccess
-		e.CRData = result.Data
+		e.CRData = &result.Data
 		s.cbs.CourtRecords.Success()
 		log.Printf("service: court records success enrichmentID=%d", e.ID)
 	} else if result.Permanent {
@@ -282,7 +282,7 @@ func (s *service) attemptSCRA(e *Enrichment, c *cases.Case) {
 			log.Printf("service: scra poll still pending enrichmentID=%d searchID=%s attempts=%d", e.ID, *e.SCRASearchID, e.SCRAAttempts)
 		} else {
 			e.SCRAStatus = SourceSuccess
-			e.SCRAData = result.Data
+			e.SCRAData = &result.Data
 			s.cbs.SCRA.Success()
 			log.Printf("service: scra success enrichmentID=%d searchID=%s", e.ID, *e.SCRASearchID)
 		}

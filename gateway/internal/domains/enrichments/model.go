@@ -33,7 +33,7 @@ type Enrichment struct {
 	PRAttempts    int
 	PRLastAttempt *time.Time
 	PRRetryAfter  *time.Time
-	PRData        json.RawMessage
+	PRData        *json.RawMessage
 	PRReason      *string
 
 	// Court Records
@@ -41,7 +41,7 @@ type Enrichment struct {
 	CRAttempts    int
 	CRLastAttempt *time.Time
 	CRRetryAfter  *time.Time
-	CRData        json.RawMessage
+	CRData        *json.RawMessage
 	CRReason      *string
 
 	// SCRA
@@ -50,6 +50,6 @@ type Enrichment struct {
 	SCRALastAttempt *time.Time
 	SCRARetryAfter  *time.Time
 	SCRASearchID    *string
-	SCRAData        json.RawMessage
+	SCRAData        *json.RawMessage
 	SCRAReason      *string
 }

@@ -2,6 +2,7 @@ package enrichments
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -20,10 +21,15 @@ func (c *Controller) CreateEnrichment(w http.ResponseWriter, r *http.Request, ca
 	e, status, err := c.usecase.CreateEnrichment(caseID)
 	if err != nil {
 		if status == 404 {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		log.Printf("CreateEnrichment error caseID=%s: %v", caseID, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
 		return
 	}
 
@@ -83,26 +89,33 @@ func toResponse(e *Enrichment) enrichmentResponse {
 		Status:      e.PRStatus,
 		Attempts:    e.PRAttempts,
 		LastAttempt: timePtr(e.PRLastAttempt),
-		Data:        e.PRData,
+		Data:        derefRaw(e.PRData),
 		Reason:      e.PRReason,
 	}
 	resp.Sources.CourtRecords = sourceResponse{
 		Status:      e.CRStatus,
 		Attempts:    e.CRAttempts,
 		LastAttempt: timePtr(e.CRLastAttempt),
-		Data:        e.CRData,
+		Data:        derefRaw(e.CRData),
 		Reason:      e.CRReason,
 	}
 	resp.Sources.SCRA = sourceResponse{
 		Status:      e.SCRAStatus,
 		Attempts:    e.SCRAAttempts,
 		LastAttempt: timePtr(e.SCRALastAttempt),
-		Data:        e.SCRAData,
+		Data:        derefRaw(e.SCRAData),
 		Reason:      e.SCRAReason,
 		SearchID:    e.SCRASearchID,
 	}
 
 	return resp
+}
+
+func derefRaw(r *json.RawMessage) json.RawMessage {
+	if r == nil {
+		return nil
+	}
+	return *r
 }
 
 func timePtr(t *time.Time) *string {

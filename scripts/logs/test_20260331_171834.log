@@ -1,0 +1,450 @@
+Session log: /Users/zhalok/Desktop/integration-gateway/scripts/logs/test_20260331_171834.log
+
+================================================================
+Health check
+================================================================
+Server is up at http://localhost:8080
+
+================================================================
+Test 1: case-001 (no court case number — CR should be not_applicable)
+================================================================
+POST /api/cases/case-001/enrich
+Response HTTP 202:
+{
+  "caseId": "case-001",
+  "status": "pending",
+  "sources": {
+    "propertyRecords": {
+      "status": "pending"
+    },
+    "courtRecords": {
+      "status": "not_applicable",
+      "reason": "Case is pre-filing — no court case number"
+    },
+    "scra": {
+      "status": "pending"
+    }
+  },
+  "startedAt": "2026-03-31T11:18:34.038721Z",
+  "completedAt": null
+}
+
+Polling until done...
+  [+0s] status=pending
+  [+3s] status=complete
+
+Final enrichment state:
+{
+  "caseId": "case-001",
+  "status": "complete",
+  "sources": {
+    "propertyRecords": {
+      "status": "success",
+      "attempts": 1,
+      "lastAttempt": "2026-03-31T11:18:34Z",
+      "data": {
+        "liens": [
+          {
+            "type": "Mortgage",
+            "amount": 385000,
+            "holder": "JPMorgan Chase Bank, N.A.",
+            "status": "Active",
+            "position": 1,
+            "instrument": "2019R0567891",
+            "recordedDate": "2019-06-15"
+          },
+          {
+            "type": "HOA Lien",
+            "amount": 2150,
+            "holder": "Diversey Park HOA",
+            "status": "Active",
+            "position": 2,
+            "instrument": "2025R0892341",
+            "recordedDate": "2025-11-03"
+          }
+        ],
+        "owner": {
+          "name": "Elena Martinez",
+          "deedDate": "2019-06-15",
+          "deedType": "Warranty Deed",
+          "instrument": "2019R0567890",
+          "vestingType": "Fee Simple"
+        },
+        "state": "IL",
+        "county": "Cook",
+        "address": "1422 W Diversey Pkwy, Chicago, IL 60614",
+        "parcelId": "14-28-322-001-0000",
+        "easements": [
+          "ComEd utility easement (Book 12045, Page 223)"
+        ],
+        "taxStatus": {
+          "year": 2025,
+          "amount": 6240,
+          "status": "Current",
+          "parcelNumber": "14-28-322-001-0000"
+        },
+        "lastUpdated": "2026-03-15T14:30:00Z",
+        "legalDescription": "LOT 14 IN BLOCK 3 OF SHEFFIELD'S ADDITION TO CHICAGO IN THE SE 1/4 OF SECTION 28, TOWNSHIP 40 NORTH, RANGE 14 EAST OF THE THIRD PRINCIPAL MERIDIAN, COOK COUNTY, ILLINOIS"
+      }
+    },
+    "courtRecords": {
+      "status": "not_applicable",
+      "reason": "Case is pre-filing — no court case number"
+    },
+    "scra": {
+      "status": "success",
+      "attempts": 2,
+      "lastAttempt": "2026-03-31T11:18:37Z",
+      "data": {
+        "lastName": "Martinez",
+        "firstName": "Elena",
+        "activeDuty": false,
+        "searchDate": "2026-03-31",
+        "certificateUrl": null
+      },
+      "searchId": "scra-1774955914051188904"
+    }
+  },
+  "startedAt": "2026-03-31T11:18:34.038721Z",
+  "completedAt": "2026-03-31T11:18:37.072426Z"
+}
+
+================================================================
+Test 2: case-002 (has court case number — all three sources)
+================================================================
+POST /api/cases/case-002/enrich
+Response HTTP 202:
+{
+  "caseId": "case-002",
+  "status": "pending",
+  "sources": {
+    "propertyRecords": {
+      "status": "pending"
+    },
+    "courtRecords": {
+      "status": "pending"
+    },
+    "scra": {
+      "status": "pending"
+    }
+  },
+  "startedAt": "2026-03-31T11:18:37.124319Z",
+  "completedAt": null
+}
+
+Polling until done...
+  [+0s] status=pending
+  [+3s] status=complete
+
+Final enrichment state:
+{
+  "caseId": "case-002",
+  "status": "complete",
+  "sources": {
+    "propertyRecords": {
+      "status": "success",
+      "attempts": 2,
+      "lastAttempt": "2026-03-31T11:18:40Z",
+      "data": {
+        "liens": [
+          {
+            "type": "Mortgage",
+            "amount": 520000,
+            "holder": "Wells Fargo Bank, N.A.",
+            "status": "Active",
+            "position": 1,
+            "instrument": "CFN2020R0234568",
+            "recordedDate": "2020-03-10"
+          },
+          {
+            "type": "Assignment of Mortgage",
+            "amount": 520000,
+            "holder": "Nationstar Mortgage LLC d/b/a Mr. Cooper",
+            "status": "Active",
+            "position": 2,
+            "instrument": "CFN2025R0891234",
+            "recordedDate": "2025-09-14"
+          },
+          {
+            "type": "HOA Lis Pendens",
+            "amount": 3420,
+            "holder": "Palmetto Bay Homeowners Association, Inc.",
+            "status": "Active",
+            "position": 3,
+            "instrument": "CFN2026R0034567",
+            "recordedDate": "2026-01-22"
+          }
+        ],
+        "owner": {
+          "name": "David R. Thompson",
+          "deedDate": "2020-03-10",
+          "deedType": "Warranty Deed",
+          "instrument": "CFN2020R0234567",
+          "vestingType": "Fee Simple"
+        },
+        "state": "FL",
+        "county": "Miami-Dade",
+        "address": "8830 SW 142nd St, Miami, FL 33176",
+        "parcelId": "30-4017-001-0290",
+        "easements": [
+          "FPL electrical transmission easement (O.R. Book 18924, Page 445)",
+          "Drainage easement to Miami-Dade County (O.R. Book 19102, Page 112)"
+        ],
+        "taxStatus": {
+          "year": 2025,
+          "amount": 8247,
+          "status": "Delinquent",
+          "parcelNumber": "30-4017-001-0290"
+        },
+        "lastUpdated": "2026-03-12T09:15:00Z",
+        "legalDescription": "LOT 29, BLOCK 1, OF PALMETTO BAY ESTATES, ACCORDING TO THE PLAT THEREOF, RECORDED IN PLAT BOOK 87, PAGE 44, OF THE PUBLIC RECORDS OF MIAMI-DADE COUNTY, FLORIDA"
+      }
+    },
+    "courtRecords": {
+      "status": "success",
+      "attempts": 1,
+      "lastAttempt": "2026-03-31T11:18:37Z",
+      "data": {
+        "Court": "Circuit Court of Miami-Dade County, 11th Judicial Circuit",
+        "Judge": "Hon. Patricia Navarro",
+        "Status": "Active",
+        "Filings": [
+          {
+            "Type": "Complaint",
+            "FiledDate": "2025-11-20",
+            "DocumentNumber": "2025-CI-28934"
+          },
+          {
+            "Type": "Lis Pendens",
+            "FiledDate": "2025-11-20",
+            "DocumentNumber": "2025-CI-28935"
+          },
+          {
+            "Type": "Summons",
+            "FiledDate": "2025-11-21",
+            "DocumentNumber": "2025-CI-28980"
+          }
+        ],
+        "Message": "",
+        "Parties": {
+          "Defendant": "David R. Thompson",
+          "Plaintiff": "Wells Fargo Bank, N.A."
+        },
+        "CaseType": "Foreclosure",
+        "Division": "Civil",
+        "CaseNumber": "2026-CA-003891",
+        "FilingDate": "2025-11-20",
+        "NextHearing": {
+          "Date": "2026-04-22",
+          "Time": "10:00",
+          "Type": "Case Management Conference",
+          "Courtroom": "5-3"
+        }
+      }
+    },
+    "scra": {
+      "status": "success",
+      "attempts": 2,
+      "lastAttempt": "2026-03-31T11:18:40Z",
+      "data": {
+        "lastName": "Thompson",
+        "firstName": "David",
+        "activeDuty": false,
+        "searchDate": "2026-03-31",
+        "certificateUrl": null
+      },
+      "searchId": "scra-1774955917130239935"
+    }
+  },
+  "startedAt": "2026-03-31T11:18:37.124319Z",
+  "completedAt": "2026-03-31T11:18:40.146164Z"
+}
+
+================================================================
+Test 3: case-006 (property records 404 — permanent failure path)
+================================================================
+POST /api/cases/case-006/enrich
+Response HTTP 202:
+{
+  "caseId": "case-006",
+  "status": "pending",
+  "sources": {
+    "propertyRecords": {
+      "status": "pending"
+    },
+    "courtRecords": {
+      "status": "pending"
+    },
+    "scra": {
+      "status": "pending"
+    }
+  },
+  "startedAt": "2026-03-31T11:18:40.206944Z",
+  "completedAt": null
+}
+
+Polling until done...
+  [+0s] status=pending
+  [+3s] status=partial
+
+Final enrichment state:
+{
+  "caseId": "case-006",
+  "status": "partial",
+  "sources": {
+    "propertyRecords": {
+      "status": "failed",
+      "attempts": 2,
+      "lastAttempt": "2026-03-31T11:18:43Z",
+      "reason": "property not found"
+    },
+    "courtRecords": {
+      "status": "success",
+      "attempts": 1,
+      "lastAttempt": "2026-03-31T11:18:40Z",
+      "data": {
+        "Court": "District Court of Dallas County, 160th Judicial District",
+        "Judge": "Hon. Robert C. Benavides",
+        "Status": "Active",
+        "Filings": [
+          {
+            "Type": "Original Petition",
+            "FiledDate": "2025-08-05",
+            "DocumentNumber": "DC-2025-45678"
+          },
+          {
+            "Type": "Citation",
+            "FiledDate": "2025-08-06",
+            "DocumentNumber": "DC-2025-45679"
+          }
+        ],
+        "Message": "",
+        "Parties": {
+          "Defendant": "Vikram Patel",
+          "Plaintiff": "Wells Fargo Bank, N.A."
+        },
+        "CaseType": "Foreclosure",
+        "Division": "Civil",
+        "CaseNumber": "2025-FC-09876",
+        "FilingDate": "2025-08-05",
+        "NextHearing": {
+          "Date": "2026-04-15",
+          "Time": "14:00",
+          "Type": "Status Conference",
+          "Courtroom": "Courtroom 3B"
+        }
+      }
+    },
+    "scra": {
+      "status": "success",
+      "attempts": 2,
+      "lastAttempt": "2026-03-31T11:18:43Z",
+      "data": {
+        "lastName": "Patel",
+        "firstName": "Vikram",
+        "activeDuty": false,
+        "searchDate": "2026-03-31",
+        "certificateUrl": null
+      },
+      "searchId": "scra-1774955920212081886"
+    }
+  },
+  "startedAt": "2026-03-31T11:18:40.206944Z",
+  "completedAt": "2026-03-31T11:18:43.231221Z"
+}
+
+================================================================
+Test 4: idempotency — POST to case-001 again (should return 200 complete)
+================================================================
+POST /api/cases/case-001/enrich (second call)
+Response HTTP 200:
+{
+  "caseId": "case-001",
+  "status": "complete",
+  "sources": {
+    "propertyRecords": {
+      "status": "success",
+      "attempts": 1,
+      "lastAttempt": "2026-03-31T11:18:34Z",
+      "data": {
+        "liens": [
+          {
+            "type": "Mortgage",
+            "amount": 385000,
+            "holder": "JPMorgan Chase Bank, N.A.",
+            "status": "Active",
+            "position": 1,
+            "instrument": "2019R0567891",
+            "recordedDate": "2019-06-15"
+          },
+          {
+            "type": "HOA Lien",
+            "amount": 2150,
+            "holder": "Diversey Park HOA",
+            "status": "Active",
+            "position": 2,
+            "instrument": "2025R0892341",
+            "recordedDate": "2025-11-03"
+          }
+        ],
+        "owner": {
+          "name": "Elena Martinez",
+          "deedDate": "2019-06-15",
+          "deedType": "Warranty Deed",
+          "instrument": "2019R0567890",
+          "vestingType": "Fee Simple"
+        },
+        "state": "IL",
+        "county": "Cook",
+        "address": "1422 W Diversey Pkwy, Chicago, IL 60614",
+        "parcelId": "14-28-322-001-0000",
+        "easements": [
+          "ComEd utility easement (Book 12045, Page 223)"
+        ],
+        "taxStatus": {
+          "year": 2025,
+          "amount": 6240,
+          "status": "Current",
+          "parcelNumber": "14-28-322-001-0000"
+        },
+        "lastUpdated": "2026-03-15T14:30:00Z",
+        "legalDescription": "LOT 14 IN BLOCK 3 OF SHEFFIELD'S ADDITION TO CHICAGO IN THE SE 1/4 OF SECTION 28, TOWNSHIP 40 NORTH, RANGE 14 EAST OF THE THIRD PRINCIPAL MERIDIAN, COOK COUNTY, ILLINOIS"
+      }
+    },
+    "courtRecords": {
+      "status": "not_applicable",
+      "reason": "Case is pre-filing — no court case number"
+    },
+    "scra": {
+      "status": "success",
+      "attempts": 2,
+      "lastAttempt": "2026-03-31T11:18:37Z",
+      "data": {
+        "lastName": "Martinez",
+        "firstName": "Elena",
+        "activeDuty": false,
+        "searchDate": "2026-03-31",
+        "certificateUrl": null
+      },
+      "searchId": "scra-1774955914051188904"
+    }
+  },
+  "startedAt": "2026-03-31T11:18:34.038721Z",
+  "completedAt": "2026-03-31T11:18:37.072426Z"
+}
+OK: got 200 as expected for a completed enrichment
+
+================================================================
+Test 5: unknown case — should return 404
+================================================================
+POST /api/cases/case-does-not-exist/enrich
+Response HTTP 404:
+{
+  "error": "case not found: case-does-not-exist"
+}
+OK: got 404 as expected
+
+================================================================
+Done
+================================================================
+All tests completed. Check server logs for the async job activity.

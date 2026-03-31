@@ -191,11 +191,10 @@ func computeOverallStatus(applicable []string) string {
 	}
 }
 
-// nullableJSON returns nil if data is empty, otherwise returns the raw bytes.
-// This prevents storing empty JSON in the database.
-func nullableJSON(data json.RawMessage) interface{} {
-	if len(data) == 0 {
+// nullableJSON returns nil if data is nil or empty, otherwise returns the raw bytes.
+func nullableJSON(data *json.RawMessage) interface{} {
+	if data == nil || len(*data) == 0 {
 		return nil
 	}
-	return []byte(data)
+	return []byte(*data)
 }
