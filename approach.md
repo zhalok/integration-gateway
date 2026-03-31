@@ -6,6 +6,8 @@
 
 ## Architecture Overview
 
+![Higher-Level Architecture](diagrams/higher-level-architecture.png)
+
 The service is a Go + PostgreSQL backend that enriches foreclosure case records by orchestrating data retrieval from three external sources. The core design principle is that enrichment is fully asynchronous — the API accepts a request and returns immediately, while a background worker handles all external calls and updates state in PostgreSQL as each source completes.
 
 **Key components:**
@@ -38,6 +40,8 @@ The service is a Go + PostgreSQL backend that enriches foreclosure case records 
 ---
 
 ## Concurrency Model
+
+![Worker Process](diagrams/worker-process.png)
 
 `POST /api/cases/{id}/enrich` pushes a job onto a worker channel and returns 202 immediately. A pool of background workers picks up jobs and fetches from all applicable sources. Property Records and SCRA can run concurrently per case. Court Records share a global rate limiter across all workers to respect the 2 req/sec limit.
 
