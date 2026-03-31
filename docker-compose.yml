@@ -1,4 +1,16 @@
 services:
+  mock-server:
+    container_name: mock-server
+    build:
+      context: ./backend_assignment_data/mock_server
+      dockerfile: Dockerfile
+    ports:
+      - "9001:9001"
+      - "9002:9002"
+      - "9003:9003"
+    networks:
+      - gateway-net
+
   postgres:
     container_name: postgres
     image: postgres:16-alpine
@@ -27,9 +39,14 @@ services:
       - "8080:8080"
     environment:
       DATABASE_URL: postgres://gateway:gateway@postgres:5432/integration_gateway?sslmode=disable
+      PROPERTY_RECORDS_URL: http://mock-server:9001
+      COURT_RECORDS_URL: http://mock-server:9002
+      SCRA_URL: http://mock-server:9003
     depends_on:
       postgres:
         condition: service_healthy
+      mock-server:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
       interval: 10s
