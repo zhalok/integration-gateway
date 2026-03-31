@@ -34,8 +34,11 @@ func StartWorkerPool(processor Processor, jobs <-chan Job, numWorkers int) {
 
 func runWorker(processor Processor, jobs <-chan Job) {
 	for job := range jobs {
+		log.Printf("worker: picked up job enrichmentID=%d caseID=%s", job.EnrichmentID, job.CaseID)
 		if err := processor.ProcessEnrichment(job.EnrichmentID, job.CaseID); err != nil {
-			log.Printf("worker: enrichmentID=%d caseID=%s: %v", job.EnrichmentID, job.CaseID, err)
+			log.Printf("worker: job failed enrichmentID=%d caseID=%s: %v", job.EnrichmentID, job.CaseID, err)
+		} else {
+			log.Printf("worker: job completed enrichmentID=%d caseID=%s", job.EnrichmentID, job.CaseID)
 		}
 	}
 }

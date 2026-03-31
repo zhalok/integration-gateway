@@ -2,6 +2,7 @@ package enrichments
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/zhalok/integration-gateway/internal/domains/cases"
 	"github.com/zhalok/integration-gateway/internal/worker"
@@ -51,12 +52,15 @@ func (u *usecase) CreateEnrichment(caseID string) (*Enrichment, int, error) {
 	if existing != nil {
 		switch existing.Status {
 		case StatusComplete:
+			log.Printf("usecase: enrichment already complete caseID=%s enrichmentID=%d", caseID, existing.ID)
 			return existing, 200, nil
 
 		case StatusPending:
+			log.Printf("usecase: enrichment already in progress caseID=%s enrichmentID=%d", caseID, existing.ID)
 			return existing, 202, nil
 
 		case StatusPartial, StatusFailed:
+			log.Printf("usecase: re-queuing enrichment caseID=%s enrichmentID=%d status=%s", caseID, existing.ID, existing.Status)
 			if err := u.svc.ResetFailedSources(existing); err != nil {
 				return nil, 500, fmt.Errorf("reset enrichment: %w", err)
 			}
@@ -69,6 +73,7 @@ func (u *usecase) CreateEnrichment(caseID string) (*Enrichment, int, error) {
 	if err != nil {
 		return nil, 500, fmt.Errorf("create enrichment: %w", err)
 	}
+	log.Printf("usecase: enrichment created caseID=%s enrichmentID=%d", caseID, e.ID)
 	u.enqueue(e.ID, caseID)
 	return e, 202, nil
 }
@@ -86,6 +91,8 @@ func (u *usecase) GetEnrichment(caseID string) (*Enrichment, error) {
 func (u *usecase) enqueue(enrichmentID int64, caseID string) {
 	select {
 	case u.jobs <- worker.Job{EnrichmentID: enrichmentID, CaseID: caseID}:
+		log.Printf("usecase: job enqueued enrichmentID=%d caseID=%s", enrichmentID, caseID)
 	default:
+		log.Printf("usecase: job channel full, dropping enqueue enrichmentID=%d caseID=%s", enrichmentID, caseID)
 	}
 }
