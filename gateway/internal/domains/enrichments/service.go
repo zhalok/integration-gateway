@@ -11,6 +11,22 @@ import (
 	"github.com/zhalok/integration-gateway/internal/worker"
 )
 
+// propertyFetcher is the subset of clients.PropertyClient used by the service.
+type propertyFetcher interface {
+	Fetch(state, county, parcelID string) clients.PropertyResult
+}
+
+// courtFetcher is the subset of clients.CourtClient used by the service.
+type courtFetcher interface {
+	Fetch(caseNumber string) clients.CourtResult
+}
+
+// scraFetcher is the subset of clients.SCRAClient used by the service.
+type scraFetcher interface {
+	Submit(lastName, firstName, ssnLast4, dob string) clients.SCRAResult
+	Poll(searchID string) clients.SCRAResult
+}
+
 // Service owns the enrichment lifecycle:
 // creating enrichments, resetting failed sources, computing overall status,
 // and processing enrichment by calling the external clients.
@@ -26,9 +42,9 @@ type Service interface {
 type service struct {
 	repo           Repository
 	caseRepo       cases.Repository
-	propertyClient *clients.PropertyClient
-	courtClient    *clients.CourtClient
-	scraClient     *clients.SCRAClient
+	propertyClient propertyFetcher
+	courtClient    courtFetcher
+	scraClient     scraFetcher
 	cbs            *circuitbreaker.Set
 	jobs           chan<- worker.Job
 }
@@ -73,12 +89,15 @@ func (s *service) Create(caseID string, courtCaseNumber *string) (*Enrichment, e
 func (s *service) ResetFailedSources(e *Enrichment) error {
 	if e.PRStatus == SourceFailed {
 		e.PRStatus = SourcePending
+		e.PRAttempts = 0
 	}
 	if e.CRStatus == SourceFailed {
 		e.CRStatus = SourcePending
+		e.CRAttempts = 0
 	}
 	if e.SCRAStatus == SourceFailed {
 		e.SCRAStatus = SourcePending
+		e.SCRAAttempts = 0
 	}
 	e.Status = StatusPending
 
@@ -99,12 +118,12 @@ func (s *service) ComputeAndUpdateStatus(enrichmentID int64) error {
 // It loads both the enrichment and its case, attempts each pending source,
 // updates the DB, and re-queues if any source is still pending.
 func (s *service) ProcessEnrichment(enrichmentID int64, caseID string) error {
-	e, err := s.repo.GetByCaseID(caseID)
+	e, err := s.repo.GetByID(enrichmentID)
 	if err != nil {
 		return fmt.Errorf("load enrichment: %w", err)
 	}
 	if e == nil {
-		return fmt.Errorf("enrichment not found for case %s", caseID)
+		return fmt.Errorf("enrichment not found: %d", enrichmentID)
 	}
 
 	c, err := s.caseRepo.GetByID(caseID)
@@ -129,6 +148,7 @@ func (s *service) ProcessEnrichment(enrichmentID int64, caseID string) error {
 
 	// Re-queue if any applicable source is still pending
 	if e.PRStatus == SourcePending || e.CRStatus == SourcePending || e.SCRAStatus == SourcePending {
+		log.Printf("service: re-queuing enrichmentID=%d pr=%s cr=%s scra=%s", e.ID, e.PRStatus, e.CRStatus, e.SCRAStatus)
 		time.Sleep(worker.PollInterval)
 		select {
 		case s.jobs <- worker.Job{EnrichmentID: e.ID, CaseID: caseID}:
@@ -157,13 +177,15 @@ func (s *service) attemptPropertyRecords(e *Enrichment, c *cases.Case) {
 	result := s.propertyClient.Fetch(c.PropertyState, c.PropertyCounty, c.PropertyParcelID)
 	if result.Err == nil {
 		e.PRStatus = SourceSuccess
-		e.PRData = result.Data
+		e.PRData = &result.Data
 		s.cbs.PropertyRecords.Success()
+		log.Printf("service: property records success enrichmentID=%d", e.ID)
 	} else if result.Permanent {
 		e.PRStatus = SourceFailed
 		reason := result.Err.Error()
 		e.PRReason = &reason
 		s.cbs.PropertyRecords.Success() // 404 is not a service failure
+		log.Printf("service: property records permanent failure enrichmentID=%d: %v", e.ID, result.Err)
 	} else {
 		s.cbs.PropertyRecords.Failure()
 		log.Printf("service: property records transient error enrichmentID=%d: %v", e.ID, result.Err)
@@ -193,13 +215,15 @@ func (s *service) attemptCourtRecords(e *Enrichment, c *cases.Case) {
 	result := s.courtClient.Fetch(*c.CourtCaseNumber)
 	if result.Err == nil {
 		e.CRStatus = SourceSuccess
-		e.CRData = result.Data
+		e.CRData = &result.Data
 		s.cbs.CourtRecords.Success()
+		log.Printf("service: court records success enrichmentID=%d", e.ID)
 	} else if result.Permanent {
 		e.CRStatus = SourceFailed
 		reason := result.Err.Error()
 		e.CRReason = &reason
 		s.cbs.CourtRecords.Success() // NoFilingFound is not a service failure
+		log.Printf("service: court records permanent failure enrichmentID=%d: %v", e.ID, result.Err)
 	} else {
 		e.CRRetryAfter = result.RetryAfter
 		s.cbs.CourtRecords.Failure()
@@ -231,12 +255,14 @@ func (s *service) attemptSCRA(e *Enrichment, c *cases.Case) {
 		}
 		e.SCRASearchID = result.SearchID
 		s.cbs.SCRA.Success()
+		log.Printf("service: scra submitted enrichmentID=%d searchID=%s", e.ID, *result.SearchID)
 	} else {
 		// Step 2: poll
 		if e.SCRAAttempts >= worker.MaxPollAttempts {
 			e.SCRAStatus = SourceFailed
 			reason := "polling timed out"
 			e.SCRAReason = &reason
+			log.Printf("service: scra poll timed out enrichmentID=%d searchID=%s attempts=%d", e.ID, *e.SCRASearchID, e.SCRAAttempts)
 			return
 		}
 
@@ -246,16 +272,19 @@ func (s *service) attemptSCRA(e *Enrichment, c *cases.Case) {
 			reason := result.Err.Error()
 			e.SCRAReason = &reason
 			s.cbs.SCRA.Success() // permanent error is not a service failure
+			log.Printf("service: scra permanent failure enrichmentID=%d searchID=%s: %v", e.ID, *e.SCRASearchID, result.Err)
 		} else if result.Err != nil {
 			s.cbs.SCRA.Failure()
-			log.Printf("service: scra poll error enrichmentID=%d: %v", e.ID, result.Err)
+			log.Printf("service: scra poll error enrichmentID=%d searchID=%s: %v", e.ID, *e.SCRASearchID, result.Err)
 		} else if result.Pending {
 			// Still waiting — will re-queue
 			s.cbs.SCRA.Success()
+			log.Printf("service: scra poll still pending enrichmentID=%d searchID=%s attempts=%d", e.ID, *e.SCRASearchID, e.SCRAAttempts)
 		} else {
 			e.SCRAStatus = SourceSuccess
-			e.SCRAData = result.Data
+			e.SCRAData = &result.Data
 			s.cbs.SCRA.Success()
+			log.Printf("service: scra success enrichmentID=%d searchID=%s", e.ID, *e.SCRASearchID)
 		}
 	}
 }

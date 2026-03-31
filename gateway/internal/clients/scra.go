@@ -5,10 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
-const scraBaseURL = "http://localhost:9003"
+func scraBaseURL() string {
+	if u := os.Getenv("SCRA_URL"); u != "" {
+		return u
+	}
+	return "http://localhost:9003"
+}
 
 type SCRAClient struct {
 	http *http.Client
@@ -45,7 +51,7 @@ func (c *SCRAClient) Submit(lastName, firstName, ssnLast4, dob string) SCRAResul
 		DOB:       dob,
 	})
 
-	resp, err := c.http.Post(scraBaseURL+"/api/scra/search", "application/json", bytes.NewReader(body))
+	resp, err := c.http.Post(scraBaseURL()+"/api/scra/search", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return SCRAResult{Err: fmt.Errorf("scra submit: %w", err)}
 	}
@@ -67,7 +73,7 @@ func (c *SCRAClient) Submit(lastName, firstName, ssnLast4, dob string) SCRAResul
 
 // Poll checks the result of a previously submitted SCRA search.
 func (c *SCRAClient) Poll(searchID string) SCRAResult {
-	resp, err := c.http.Get(scraBaseURL + "/api/scra/results/" + searchID)
+	resp, err := c.http.Get(scraBaseURL() + "/api/scra/results/" + searchID)
 	if err != nil {
 		return SCRAResult{Err: fmt.Errorf("scra poll: %w", err)}
 	}

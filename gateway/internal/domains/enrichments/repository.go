@@ -8,6 +8,7 @@ import (
 )
 
 type Repository interface {
+	GetByID(id int64) (*Enrichment, error)
 	GetByCaseID(caseID string) (*Enrichment, error)
 	Create(caseID string, courtCaseNumber *string) (*Enrichment, error)
 	Update(e *Enrichment) error
@@ -20,6 +21,28 @@ type postgresRepository struct {
 
 func NewRepository(db *sql.DB) Repository {
 	return &postgresRepository{db: db}
+}
+
+func (r *postgresRepository) GetByID(id int64) (*Enrichment, error) {
+	e := &Enrichment{}
+	err := r.db.QueryRow(`
+		SELECT id, case_id, status, started_at, completed_at,
+		       pr_status, pr_attempts, pr_last_attempt, pr_retry_after, pr_data, pr_reason,
+		       cr_status, cr_attempts, cr_last_attempt, cr_retry_after, cr_data, cr_reason,
+		       scra_status, scra_attempts, scra_last_attempt, scra_retry_after, scra_search_id, scra_data, scra_reason
+		FROM enrichments WHERE id = $1`, id).Scan(
+		&e.ID, &e.CaseID, &e.Status, &e.StartedAt, &e.CompletedAt,
+		&e.PRStatus, &e.PRAttempts, &e.PRLastAttempt, &e.PRRetryAfter, &e.PRData, &e.PRReason,
+		&e.CRStatus, &e.CRAttempts, &e.CRLastAttempt, &e.CRRetryAfter, &e.CRData, &e.CRReason,
+		&e.SCRAStatus, &e.SCRAAttempts, &e.SCRALastAttempt, &e.SCRARetryAfter, &e.SCRASearchID, &e.SCRAData, &e.SCRAReason,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get enrichment by id: %w", err)
+	}
+	return e, nil
 }
 
 func (r *postgresRepository) GetByCaseID(caseID string) (*Enrichment, error) {
@@ -168,11 +191,10 @@ func computeOverallStatus(applicable []string) string {
 	}
 }
 
-// nullableJSON returns nil if data is empty, otherwise returns the raw bytes.
-// This prevents storing empty JSON in the database.
-func nullableJSON(data json.RawMessage) interface{} {
-	if len(data) == 0 {
+// nullableJSON returns nil if data is nil or empty, otherwise returns the raw bytes.
+func nullableJSON(data *json.RawMessage) interface{} {
+	if data == nil || len(*data) == 0 {
 		return nil
 	}
-	return []byte(data)
+	return []byte(*data)
 }
