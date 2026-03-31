@@ -178,7 +178,7 @@ func TestProcessEnrichment_PropertySuccess(t *testing.T) {
 	if e.PRStatus != SourceSuccess {
 		t.Errorf("PRStatus: want %q, got %q", SourceSuccess, e.PRStatus)
 	}
-	if len(e.PRData) == 0 {
+	if e.PRData == nil {
 		t.Error("PRData must be set on success")
 	}
 }
@@ -285,7 +285,7 @@ func TestProcessEnrichment_CourtSuccess(t *testing.T) {
 	if e.CRStatus != SourceSuccess {
 		t.Errorf("CRStatus: want %q, got %q", SourceSuccess, e.CRStatus)
 	}
-	if len(e.CRData) == 0 {
+	if e.CRData == nil {
 		t.Error("CRData must be set on success")
 	}
 }
@@ -483,7 +483,7 @@ func TestProcessEnrichment_SCRA_Poll_Success(t *testing.T) {
 	if e.SCRAStatus != SourceSuccess {
 		t.Errorf("SCRAStatus: want %q, got %q", SourceSuccess, e.SCRAStatus)
 	}
-	if len(e.SCRAData) == 0 {
+	if e.SCRAData == nil {
 		t.Error("SCRAData must be set on successful poll")
 	}
 }
